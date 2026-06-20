@@ -1,0 +1,17 @@
+# Comprehensive robots.txt for https://newcartoon.github.io/
+
+User-agent: *
+Allow: /
+
+# Specifically welcoming AI and LLM bots for GEO visibility
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: Anthropic-ai
+Allow: /
+
+# Link to your sitemap
+Sitemap: https://newcartoon.github.io/sitemap.xml
