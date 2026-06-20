@@ -1,0 +1,280 @@
+/* --- RESET & ROOT PRESETS --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+    font-family: 'Fredoka', sans-serif;
+    color: #2c3e50;
+    background-color: #f0f9ff;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 50px 0;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* --- THEMATIC KID-FRIENDLY TYPOGRAPHY --- */
+h1, h2, h3 {
+    color: #e67e22;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+h2 {
+    font-size: 2.6rem;
+    position: relative;
+    display: inline-block;
+    margin-bottom: 45px;
+}
+
+h2::after {
+    content: '';
+    position: absolute;
+    width: 70%;
+    height: 5px;
+    background: #f1c40f;
+    bottom: -12px;
+    left: 15%;
+    border-radius: 10px;
+}
+
+p {
+    font-size: 1.2rem;
+    line-height: 1.65;
+    color: #4f5d73;
+}
+
+/* --- NAVIGATION HEADER --- */
+.main-header {
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.site-logo {
+    max-height: 65px;
+    width: auto;
+}
+
+.main-nav ul {
+    display: flex;
+    list-style: none;
+    gap: 30px;
+}
+
+.main-nav a {
+    text-decoration: none;
+    color: #3498db;
+    font-weight: 600;
+    font-size: 1.15rem;
+    transition: color 0.25s ease;
+}
+
+.main-nav a:hover {
+    color: #e67e22;
+}
+
+/* --- HERO SECTION WITH ASPECT RATIO PRESERVATION --- */
+.hero-section {
+    position: relative;
+    width: 100%;
+    background: #e0f2fe;
+}
+
+.hero-banner-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.hero-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    aspect-ratio: 1200 / 630;
+    object-fit: cover;
+}
+
+.hero-overlay-text {
+    position: absolute;
+    bottom: 8%;
+    left: 4%;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 30px;
+    border-radius: 24px;
+    max-width: 480px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+}
+
+.cta-btn {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 14px 32px;
+    background: #e67e22;
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    border-radius: 40px;
+    box-shadow: 0 5px 15px rgba(230,126,34,0.35);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.cta-btn:hover {
+    transform: translateY(-2px);
+    background: #d35400;
+}
+
+/* --- MAGICAL STORY STYLING --- */
+.story-section {
+    background: #ffffff;
+}
+
+.story-card {
+    max-width: 850px;
+    margin: 0 auto;
+    background: #f1fcf2;
+    border: 3px dashed #2ecc71;
+    padding: 35px;
+    border-radius: 28px;
+}
+
+.story-card p {
+    margin-bottom: 20px;
+}
+.story-card p:last-child {
+    margin-bottom: 0;
+}
+
+/* --- ANIMAL FRIENDS CARDS GRID --- */
+.character-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 35px;
+    margin-top: 20px;
+}
+
+.char-card {
+    background: white;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.03);
+    border: 1px solid #e2e8f0;
+    padding: 24px;
+    text-align: center;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.char-card:hover {
+    transform: translateY(-6px);
+}
+
+.char-card img {
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+    margin-bottom: 18px;
+    object-fit: cover;
+}
+
+/* --- YOUTUBE COMPONENT (ZERO CONTENT SHIFT) --- */
+.video-section {
+    background: #fef9c3;
+}
+
+.section-subtitle {
+    margin-bottom: 35px;
+}
+
+.video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%; /* Fixed 16:9 box aspect ratio to guarantee 100% Core Web Vitals score */
+    height: 0;
+    overflow: hidden;
+    max-width: 850px;
+    margin: 0 auto 35px auto;
+    border-radius: 24px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    background: #000;
+}
+
+.video-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.youtube-btn {
+    display: inline-block;
+    padding: 16px 45px;
+    background: #ff0000;
+    color: white;
+    text-decoration: none;
+    font-size: 1.25rem;
+    font-weight: 700;
+    border-radius: 40px;
+    box-shadow: 0 6px 20px rgba(255,0,0,0.3);
+    transition: background 0.2s, transform 0.2s;
+}
+
+.youtube-btn:hover {
+    background: #cc0000;
+    transform: scale(1.04);
+}
+
+/* --- FOOTER SETUP --- */
+.main-footer {
+    background: #1e293b;
+    color: #94a3b8;
+    padding: 50px 0;
+}
+
+.main-footer p {
+    color: #cbd5e1;
+    font-size: 1.05rem;
+}
+
+.footer-seo-note {
+    font-size: 0.9rem !important;
+    margin-top: 12px;
+    color: #64748b !important;
+}
+
+/* --- MOBILE RESPONSIVE MEDIA QUERIES --- */
+@media (max-width: 768px) {
+    .header-flex {
+        flex-direction: column;
+        gap: 15px;
+    }
+    .hero-overlay-text {
+        position: relative;
+        left: 0;
+        bottom: 0;
+        max-width: 100%;
+        border-radius: 0;
+        padding: 20px;
+    }
+    h2 {
+        font-size: 2.1rem;
+    }
+}
