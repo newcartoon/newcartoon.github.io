@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-<title>Aqua Chat</title>
+<title>Water Ai</title>
 <style>
 /* ============================================================
-   AQUA CHAT — single file build (HTML + CSS + JS, no framework)
+   Water Ai — single file build (HTML + CSS + JS, no framework)
    ============================================================ */
 :root{
   --blue:#7DD3FC;
@@ -281,7 +281,7 @@ button{font-family:inherit;cursor:pointer;}
   <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="brand"><span class="brand-dot"></span> Aqua Chat</div>
+      <div class="brand"><span class="brand-dot"></span> Water Ai</div>
       <button class="new-chat-btn" id="newChatBtn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#06323f" stroke-width="2.4" stroke-linecap="round"/></svg>
         New chat
@@ -333,7 +333,7 @@ button{font-family:inherit;cursor:pointer;}
     <div class="composer-wrap">
       <div class="composer">
         <button class="deep-toggle-inline" id="deepToggle" title="Deep Thought mode">🧠 Deep thought</button>
-        <textarea id="promptInput" rows="1" placeholder="Message Aqua Chat…"></textarea>
+        <textarea id="promptInput" rows="1" placeholder="Message Water Ai…"></textarea>
         <button class="send-btn" id="sendBtn" title="Send">
           <svg id="sendIcon" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 12l16-7-6 16-2.5-6.5L4 12z" fill="#06323f"/></svg>
         </button>
@@ -380,7 +380,10 @@ button{font-family:inherit;cursor:pointer;}
    CONFIGURATION  (acts as the app's "config file" section)
    ============================================================ */
 const CONFIG = {
-  API_ENDPOINT: 'https://wormgpt.freeapihub.workers.dev/chat?q=',
+  API_ENDPOINT: 'https://wormgpt.freeapihub.workers.dev/chat',
+  API_METHOD: 'GET',
+  API_BODY_TEMPLATE: '{"prompt":"{{PROMPT}}"}',
+  API_AUTH_HEADER: '',
   LOG_KEY: 'aquaChat-log',
   STORAGE_KEY: 'aquaChat-storage',
   SETTINGS_KEY: 'aquaChat-settings',
@@ -402,6 +405,71 @@ const CONFIG = {
 };
 
 function buildApiUrl(){ return CONFIG.API_ENDPOINT; }
+
+function getRequestOptions(prompt, signal){
+  const headers = { 'Accept': 'application/json' };
+  if (CONFIG.API_AUTH_HEADER) headers['Authorization'] = CONFIG.API_AUTH_HEADER;
+  if (CONFIG.API_METHOD === 'POST'){
+    headers['Content-Type'] = 'application/json';
+    const bodyText = CONFIG.API_BODY_TEMPLATE.replace(/{{PROMPT}}/g, prompt);
+    return { method: 'POST', headers, body: bodyText, signal };
+  }
+  return { method: 'GET', headers, signal };
+}
+
+function buildRequestUrl(prompt){
+  let url = CONFIG.API_ENDPOINT;
+  if (url.includes('{{PROMPT}}')){
+    return url.replace(/{{PROMPT}}/g, encodeURIComponent(prompt));
+  }
+  if (CONFIG.API_METHOD === 'GET'){
+    if (url.includes('?')){
+      if (url.endsWith('?') || url.endsWith('&') || /[?&][^=]*=$/.test(url)) {
+        return `${url}${encodeURIComponent(prompt)}`;
+      }
+      return `${url}&q=${encodeURIComponent(prompt)}`;
+    }
+    return `${url}?q=${encodeURIComponent(prompt)}`;
+  }
+  return url;
+}
+
+function extractTextFromJson(data){
+  if (!data) return '';
+  if (typeof data === 'string') return data;
+  if (typeof data === 'number' || typeof data === 'boolean') return String(data);
+  if (Array.isArray(data)){
+    for (const item of data){
+      const found = extractTextFromJson(item);
+      if (found) return found;
+    }
+    return '';
+  }
+  if (data.response) return extractTextFromJson(data.response);
+  if (data.answer) return extractTextFromJson(data.answer);
+  if (data.message) return extractTextFromJson(data.message);
+  if (data.reply) return extractTextFromJson(data.reply);
+  if (data.result) return extractTextFromJson(data.result);
+  if (data.output) return extractTextFromJson(data.output);
+  if (data.output_text) return extractTextFromJson(data.output_text);
+  if (data.text) return extractTextFromJson(data.text);
+  if (data.choices && Array.isArray(data.choices)){
+    const first = data.choices[0];
+    return extractTextFromJson(first?.message?.content || first?.text || first);
+  }
+  if (data.data && Array.isArray(data.data)) return extractTextFromJson(data.data[0]);
+  if (data.data && typeof data.data === 'object') return extractTextFromJson(data.data);
+  const keys = Object.keys(data);
+  for (const key of keys){
+    const value = data[key];
+    if (typeof value === 'string' && value.trim()) return value;
+    if (typeof value === 'object'){
+      const found = extractTextFromJson(value);
+      if (found) return found;
+    }
+  }
+  return JSON.stringify(data);
+}
 
 /* ============================================================
    TINY UTILITIES
@@ -782,10 +850,7 @@ function buildMessageEl(msg){
   row.appendChild(avatar);
   row.appendChild(col);
 
-  bubble.querySelectorAll('.copy-btn[data-code]').forEach(btn => {
-    btn.addEventListener('click', () => copyText(decodeURIComponent(btn.dataset.code), btn));
-  });
-
+  // Copy buttons are handled via event delegation to stay reliable after re-renders.
   return row;
 }
 
@@ -822,9 +887,10 @@ function typeIntoBubble(bubbleEl, fullText, onDone){
 
   function tick(){
     if (state.abortTyping){
-      finish();
+      // Cancel: do not commit final content.
       return;
     }
+
     i += step;
     const partial = fullText.slice(0, i);
     bubbleEl.innerHTML = renderMarkdown(partial) + '<span class="typing-dots"><span></span><span></span><span></span></span>';
@@ -841,26 +907,6 @@ function typeIntoBubble(bubbleEl, fullText, onDone){
 /* ============================================================
    API LAYER
    ============================================================ */
-async function checkApiStatus(){
-  const dot = $('#statusDot'), txt = $('#statusText');
-  dot.className = 'status-dot checking';
-  txt.textContent = 'Checking…';
-  try{
-    const res = await fetch(CONFIG.API_ENDPOINT + encodeURIComponent('ping'), { method: 'GET' });
-    if (res.ok){
-      dot.className = 'status-dot online';
-      txt.textContent = 'Online';
-    } else {
-      dot.className = 'status-dot offline';
-      txt.textContent = 'Degraded';
-    }
-  }catch(e){
-    dot.className = 'status-dot offline';
-    txt.textContent = 'Offline';
-    Logger.warn('Status check failed', e.message);
-  }
-}
-
 function buildContextualQuery(chat, userText, deepThought){
   let contextStr = '';
   if (state.settings.memory){
@@ -868,26 +914,56 @@ function buildContextualQuery(chat, userText, deepThought){
     contextStr = recent.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
   }
   let query = contextStr ? `${contextStr}\nUser: ${userText}` : userText;
+  const formatPrompt = `You are a helpful, polite assistant. Answer in English. Use Markdown formatting with headings, bullet lists, numbered steps, and code blocks when appropriate. Begin with a short summary, then provide clear details. Do not use profanity, insults, slang, or offensive language. Keep your tone professional and friendly.`;
   if (deepThought){
     query = `Think step by step, carefully and in depth, then give a thorough well-reasoned answer.\n${query}`;
   }
-  query = `Please format your response in markdown using headings, bullet points, numbered steps, code blocks when needed, and a short summary. Keep the answer clear and easy to scan.\n\n${query}`;
+  query = `${formatPrompt}\n\n${query}`;
   return query;
 }
 
 async function callApi(query, signal){
-  const url = CONFIG.API_ENDPOINT + encodeURIComponent(query);
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const contentType = res.headers.get('content-type') || '';
-  let text;
-  if (contentType.includes('application/json')){
-    const data = await res.json();
-    text = data.response || data.answer || data.message || data.reply || data.result || JSON.stringify(data);
-  } else {
-    text = await res.text();
+  const url = buildRequestUrl(query);
+  const opts = getRequestOptions(query, signal);
+  try {
+    const res = await fetch(url, opts);
+    if (!res.ok){
+      const errText = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}${errText ? `: ${errText}` : ''}`);
+    }
+    const contentType = res.headers.get('content-type') || '';
+    let text;
+    if (contentType.includes('application/json')){
+      try {
+        const data = await res.json();
+        text = extractTextFromJson(data);
+      } catch (jsonErr){
+        text = await res.text();
+      }
+    } else {
+      text = await res.text();
+    }
+    return sanitizeBrand(text);
+  } catch (err) {
+    if (err.name === 'AbortError') throw err;
+    Logger.warn('Remote API failed, using local fallback', err.message);
+    return localApiFallback(query);
   }
-  return sanitizeBrand(text);
+}
+
+function localApiFallback(query){
+  const prompt = query.replace(/\s+/g,' ').trim();
+  if (!prompt) return 'I did not receive any question. Please try again.';
+  if (/\bhello\b|\bhi\b|\bhey\b/i.test(prompt)){
+    return 'Hello! The remote AI service is currently unavailable, so you are using a local fallback response.';
+  }
+  if (/\bname\b/i.test(prompt)){
+    return 'I am the Water Ai fallback assistant that keeps your chat working even when the online API is down.';
+  }
+  if (/\bhelp\b|\bhow\b|\bwhat can you\b/i.test(prompt)){
+    return 'I can answer simple questions and help verify your chat interface. The real AI service is offline right now.';
+  }
+  return `The remote API is unavailable, so this is an offline fallback answer. You asked: "${prompt}"`;
 }
 
 /* ============================================================
@@ -899,6 +975,9 @@ async function sendMessage(){
   const input = $('#promptInput');
   const raw = input.value.trim();
   if (!raw || state.generating) return;
+
+  state.generating = true;
+  setSendButtonState(true);
 
   ensureActiveChat();
   const chat = getChat(state.currentId);
@@ -1034,7 +1113,7 @@ function importChats(file){
       alert(`Imported ${valid.length} chat(s).`);
     }catch(e){
       Logger.error('Import failed', e.message);
-      alert('Import failed: file is not a valid Aqua Chat export.');
+      alert('Import failed: file is not a valid Water Ai export.');
     }
   };
   reader.readAsText(file);
@@ -1057,8 +1136,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!state.chats.length) createChat(); else state.currentId = state.chats[0].id;
   renderSidebar();
   renderMessages();
-  checkApiStatus();
-  setInterval(checkApiStatus, CONFIG.STATUS_CHECK_INTERVAL_MS);
 
   $('#darkModeSwitch').checked = state.settings.theme === 'dark';
   $('#filterSwitch').checked = state.settings.filter;
